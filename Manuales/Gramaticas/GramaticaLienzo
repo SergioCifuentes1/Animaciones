@@ -1,0 +1,42 @@
+N: {Inicio,Cabecera,Lienzos,Lienzo,Componentes,Componente,Id,Nombre,Tipo,Color,CompRGBs,
+RGB,NumRGB,NumHex,CompsTamaño,CompsTam,HEX:#,Red,Blue,Green}
+T:  {{,},,,:,",png,gif,LIENZOS,nombre,tipo,Fondo,tamaño}
+
+S:  {Inicio}
+P:
+
+Inicio 			::= {Cabecera} ;
+Cabecera     ::=  LIENZOS:{Lienzos} ;
+Lienzos     ::=  Lienzo , Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id :{Componentes};
+Componentes 	::=  Componente, Componentes
+				| Componente
+Componente	::= nombre: "Nombre"
+				|tipo :"Tipo"
+				|Fondo:{Color}
+				|tamaño:{CompsTamaño};
+Id		::=Letra|_(Letra|Numero|_)*;
+Nombre ::= (Letra|Numero|Simbolo|" ")+;
+Tipo ::= png
+		|gif;
+Color ::= CompRGBs
+		| HEX:#NumHEX;
+CompRGBs ::=RGB,CompRGBs
+			|RGB;
+RGB	::= Red: NumRGB
+		| Blue: NumRGB
+		| Green: NumRGB;
+NumRGB::= Digito(Digito|"")^2;
+NumHEX::= (DigitoHEX)^6
+
+CompsTamaño::= CompTam,CompsTamaño;
+				|CompsTam;
+CompsTam::=	cuadro: Entero
+               			| dimension_x: Entero
+                                 |   dimension_y: Entero;
+DigitoHEX::=  Digito	|A	|B	|C	|D	|E	|F;
+Entero (Digito)+
+Simbolo 	::= _|$|-;
+Letra			::= [Aa-Zz];
+Digito			::= [0-9];

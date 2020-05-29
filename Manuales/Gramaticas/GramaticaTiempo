@@ -1,0 +1,27 @@
+N: {Inicio,Cabecera,Lienzos, Lienzo,Comps_Tiempo, Comp_Tiempo,Imagenes, Comps_Imagen, Comp_Imagen, Id,Nombre }
+RGB,NumRGB,NumHex}
+T:  {{,},,,:,",TIEMPOS,duracion,id,[,]}
+S:  {Inicio}
+P:
+
+Inicio 			::= {Cabecera} ;
+Cabecera     ::=  TIEMPOS:{Lienzos} ;
+Lienzos     ::=  Lienzo , Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id :{Comps_Tiempo};
+Comps_Tiempo 	::=  Comp_Tiempo, Comps_Tiempo
+				| Comp_Tiempo
+Comp_Tiempo::= inicio: "Id"
+				|fin : "Id"
+				|imagenes:[Imagenes]
+Imagenes ::= {Comps_Imagen},Imagenes
+			|{Comps_Imagen}
+Comps_Imagen ::= Comp_Imagen,Comps_Imagen
+			|Comp_Imagen
+Comp_Imagen ::= id:"Id"
+				|duracion: Entero
+Id		::=Letra|_(Letra|Numero|_)*;
+Entero ::=(Digito)+
+Simbolo 	::= _|$|-;
+Letra			::= [Aa-Zz];
+Digito			::= [0-9];

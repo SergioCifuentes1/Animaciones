@@ -1,0 +1,28 @@
+N: {Inicio,Cabecera,Lienzos,Lienzo,Id_Colores,Id_Color,Id,Nombre,Color,CompRGBs,
+RGB,NumRGB,NumHex}
+T:  {{,},,,:,COLORES,HEX:#,Red,Blue,Green}
+S:  {Inicio}
+P:
+
+Inicio 			::= {Cabecera} ;
+Cabecera     ::=  COLORES:{Lienzos} ;
+Lienzos     ::=  Lienzo , Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id :{Id_Colores};
+Id_Colores 	::=  Id_Color, Id_Colores
+				| Id_Colores
+Id_Color	::= Id:{Color}
+Color ::= CompRGBs
+		| HEX:#NumHEX;
+Id		::=Letra|_(Letra|Numero|_)*;
+CompRGBs ::=RGB,CompRGBs
+			|RGB;
+RGB	::= Red: NumRGB
+		| Blue: NumRGB
+		| Green: NumRGB;
+NumRGB::= Digito(Digito|"")^2;
+NumHEX::= (DigitoHEX)^6
+DigitoHEX::=  Digito	|A	|B	|C	|D	|E	|F;
+Simbolo 	::= _|$|-;
+Letra			::= [Aa-Zz];
+Digito			::= [0-9];

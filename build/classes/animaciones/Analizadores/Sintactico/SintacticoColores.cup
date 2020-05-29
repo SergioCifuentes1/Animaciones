@@ -1,0 +1,215 @@
+package animaciones.Analizadores.Sintactico;
+import animaciones.Analizadores.Semantico.TablaDeSimbolos;
+import animaciones.Objetos.Lienzo;
+import animaciones.Analizadores.Semantico.Objeto;
+import java.util.ArrayList;
+import java.awt.Color;
+import animaciones.ui.IDE;
+import java_cup.runtime.Symbol;
+
+ parser code {:
+    public boolean error;
+    public boolean errorRecuperable;
+    public TablaDeSimbolos tablaDeSimbolos;
+        protected IDE ide;
+    public  void setFrame(IDE frame){
+        ide =frame;
+    }
+public void setTablaDeSimbolos(TablaDeSimbolos tablaDeSimbolos) {
+        this.tablaDeSimbolos = tablaDeSimbolos;
+    }
+    public  void setTabla(TablaDeSimbolos tabla){
+        this.tablaDeSimbolos =tabla;
+    }
+
+     public void syntax_error(Symbol s){
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        ide.escribirEnOutput("Error Sintactico Recuperado\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception{
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        ide.escribirEnOutput("Error Sintactico Panic Mode\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+    
+    public void mostrarElementoNoExistente(String nombreLienzo, Symbol s){
+    ide.escribirEnOutput("Error Semantico \n");
+    ide.escribirEnOutput("Lienzo \""+nombreLienzo+"\" no existe en El Archivo .lnz \n");
+
+}
+
+    public void ayudarConErrores(int tipo) {
+
+        String texto = "Sugerencias Para Error:\n";
+        switch (tipo) {
+            case 1:
+                texto += "Para Los Colores las opciones son un codigo HEX que representa el numero o una descripcion RGB por ejemplo:"
+                        + "\nRed:2,Green:3, Blue:20\n HEX: "
+                        + "#FFF123\n";
+                break;
+            case 5:
+                texto += "Necesitas un id para cada lienzo de estructura alfanumerico como por ejemplo\n\tid_lienzo{...}\n";
+                break;
+            case 6:
+                texto += "La estructura de este arhivo debe ser:\n {\n\tCOLORES:{...}\n}\n";
+                break;
+                
+            default:
+                throw new AssertionError();
+        }
+       ide.escribirEnOutput(texto);
+    }
+
+:}
+
+action code {:
+    private boolean error =false;
+    private boolean errorRecuperable=false;
+        private Object[] atributosColor = new Object[3];
+    private void resetearAtributos(Object[] atributos){
+        for(int i=0;i<atributos.length;i++){
+            atributos[i]=null;
+        }
+    }
+
+
+    public boolean getError(){
+        return error;
+    }
+        protected void mostrarAtributoRepetido(String atributo, Symbol s,AnalizadorSintacticoColores asc) {
+        asc.ide.escribirEnOutput("Error Semantico \n");
+        asc.ide.escribirEnOutput("El atributo " + atributo + " se encuentra repetido\n");
+
+        asc.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        asc.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+    protected void mostrarElementoFaltante(Object[] atributos,int tipo, Symbol s,AnalizadorSintacticoColores asc) {
+        asc.ide.escribirEnOutput("Atributo Faltante: \n");
+        String text="";
+        switch (tipo) {
+            
+            case 1:
+                if(atributos[0]==null){
+                    text+="\t-Red\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-Green\n";
+                }
+                if(atributos[2]==null){
+                     text+="\t-Blue\n";
+                }
+                break;
+            
+        }
+        asc.ide.escribirEnOutput(text);
+        asc.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        asc.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal COLORES,HEX,RED,BLUE,GREEN,LLAVE_A,LLAVE_C,DOS_PUNTOS,COMA;
+terminal String NumRGB,NumHEX,Id,ERROR;
+
+/* Non-terminals */
+non terminal Inicio,Cabecera,Lienzos,Lienzo,Id_Colores,Id_Color,Color,CompRGBs,RGB;
+
+start with Inicio;
+
+Inicio 		::= LLAVE_A Cabecera LLAVE_C{:asc.error=this.error;asc.errorRecuperable=this.errorRecuperable;:}
+                    |error {:error=true;asc.ayudarConErrores(6);asc.error=this.error;asc.errorRecuperable=this.errorRecuperable;:} ;
+Cabecera     ::=  COLORES DOS_PUNTOS LLAVE_A  Lienzos LLAVE_C 
+                    |error {:error=true;asc.ayudarConErrores(6);:};
+Lienzos     ::=  Lienzo COMA Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id:id DOS_PUNTOS LLAVE_A Id_Colores:colores LLAVE_C{:if(asc.tablaDeSimbolos.obtenerExistencia((String)id,TablaDeSimbolos.TIPO_LIENZO)!=null){
+                                                                
+                                                             ArrayList<Objeto> objetos= (ArrayList<Objeto>)colores;
+                                                             for(int i=0;i<objetos.size();i++){
+                                                                        
+                                                                        if(asc.tablaDeSimbolos.obtenerExistencia(objetos.get(i).getId(),
+                                                                        TablaDeSimbolos.TIPO_COLOR,(String)id)==null){
+                                                                        Lienzo li =(Lienzo)((Objeto)(asc.tablaDeSimbolos.obtenerExistencia((String)id,TablaDeSimbolos.TIPO_LIENZO))).getValor();
+                                                                        li.agregarColor((Color)objetos.get(i).getValor(),objetos.get(i).getId() );
+                                                                        asc.tablaDeSimbolos.insertObject(objetos.get(i).getId(),
+                                                                        TablaDeSimbolos.TIPO_COLOR,objetos.get(i).getValor(),(String)id);
+                                                                        
+                                                                         }else{
+                                                                        mostrarAtributoRepetido("Color de Id "+objetos.get(i).getId(),((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()),asc); 
+                                                                        };
+                                                             }
+                                                            }else{
+                                                                  asc.mostrarElementoNoExistente((String)id,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()));             
+                                                            }
+                                                             :}
+                |error {:asc.ayudarConErrores(5);:};
+Id_Colores 	::=  Id_Color:color COMA Id_Colores:colores           {:
+                                                                                ArrayList<Objeto> objetos= new ArrayList<>();
+                                                                                if(color!=null){
+                                                                        objetos.add((Objeto) color);
+                                                                        }
+                                                                        for(int i=0;i<((ArrayList<Objeto>)colores).size();i++){
+                                                                        objetos.add(((ArrayList<Objeto>)colores).get(i));
+                                                                         }
+                                                                         RESULT= objetos;:}
+				| Id_Color:color    {:
+                                                                        ArrayList<Objeto> objetos= new ArrayList<>();
+                                                                        if(color!=null){
+                                                                        objetos.add((Objeto) color);
+                                                                        
+                                                                        } RESULT= objetos;:};
+Id_Color::= Id:id DOS_PUNTOS LLAVE_A Color:color LLAVE_C{:if(color !=null){
+                                                                Objeto ob = new Objeto((String)id,TablaDeSimbolos.TIPO_COLOR,(Color)color);
+                                                                RESULT =ob;
+                                                                }else{RESULT =null;}:};
+
+Color ::= CompRGBs:color {:RESULT =color;:}
+		| HEX NumHEX:numColor {:Color color =Lienzo.construirColor((String)numColor);
+                                        RESULT =color;:};
+
+
+CompRGBs ::=RGB COMA CompRGBs:com {:RESULT =com;:}
+			|RGB        {:if(Lienzo.verificarObligatoriosTam(atributosColor)){
+                                    Color color =Lienzo.construirColor(atributosColor);
+                                    RESULT=color;
+                                    }else{
+                                      errorRecuperable=true;
+                                       mostrarElementoFaltante(atributosColor,1,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()),asc);
+                                                                    } 
+                                                                    resetearAtributos(atributosColor);:};
+RGB	::= RED DOS_PUNTOS NumRGB:num  {:if(atributosColor[0]==null){
+                                                   atributosColor[0]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Red ",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()),asc);
+                                                }:}
+		| BLUE DOS_PUNTOS NumRGB:num    {:if(atributosColor[2]==null){
+                                                   atributosColor[2]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Blue",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()),asc);
+                                                }:}
+		| GREEN DOS_PUNTOS NumRGB:num   {:if(atributosColor[1]==null){
+                                                   atributosColor[1]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Green",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoColores$stack.peek()),asc);
+                                                }:}
+                |error {:asc.ayudarConErrores(1);:};
+
+

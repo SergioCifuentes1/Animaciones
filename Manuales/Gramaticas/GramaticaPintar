@@ -1,0 +1,58 @@
+N: {Inicio,Cabecera,Lienzos, Lienzo,Comps_Tiempo, Comp_Tiempo,Imagenes, Comps_Imagen, Comp_Imagen, Id,Nombre }
+RGB,NumRGB,NumHex}
+T:  {{,},,,:,",VARS,INSTRUCCIONES ,id ,[,] ,int, String,boolean,true, false, PINTAR, if,else, while, and, or ,=, ==, <, >, >=, <=, <>,+,-,/,*,..}
+S:  {Inicio}
+P:
+
+Inicio 			::= VARS[Declaraciones]Instrucciones
+Declaraciones     ::= Declaracion;Declaraciones
+					|Declaracion;
+Declaracion 	::=	Tipo variables
+Tipo::=		int
+			|String 
+			|boolean
+variables	::= variable ,variables
+			|variable
+variable		::= id =inicializacion
+				| id
+inicializacion::= "String"
+				| id
+				|numero
+				|bool
+numero     ::= numero + numero
+			|numero - numero
+			|numero * numero
+			|numero / numero
+			|Entero
+			|id
+bool::= boolean
+		|boolean OpLog bool
+OpLog::= AND
+			|OR
+boolean     ::=  true
+			| false
+			|     numero OpRelacional numero
+			
+Instrucciones 	::=  INSTRUCCIONES(id)[codigo] Instrucciones
+					|INSTRUCCIONES(id)[codigo] 
+codigo ::=  instruccion codigo
+		|instruccion
+instruccion::= id=inicializacion;
+			|Pintar;
+			|If
+			|While
+			|
+Pintar:=PINTAR (id_Pintar,id_Pintar,num_Pintar,num_Pintar)
+id_Pintar::=String
+			|id
+num_Pintar::=numero..numero
+			|numero
+If::=	if(boolean){codigo}else
+else::=	else{codigo}
+		|
+While	::= while(boolean){codigo}
+Id		::=Letra|_(Letra|Numero|_)*;
+Entero ::=(Digito)+
+Simbolo 	::= _|$|-;
+Letra			::= [Aa-Zz];
+Digito			::= [0-9];

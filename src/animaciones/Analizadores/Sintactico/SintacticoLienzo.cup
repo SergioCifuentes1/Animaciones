@@ -1,0 +1,283 @@
+package animaciones.Analizadores.Sintactico;
+import animaciones.Analizadores.Semantico.TablaDeSimbolos;
+import animaciones.Objetos.Lienzo;
+import java.awt.Dimension;
+import java.awt.Color;
+import animaciones.ui.IDE;
+import java_cup.runtime.Symbol;
+
+ parser code {:
+    public boolean error;
+    public boolean errorRecuperable;
+    public TablaDeSimbolos tablaDeSimbolos;
+        protected IDE ide;
+    public  void setFrame(IDE frame){
+        ide =frame;
+    }
+public void setTablaDeSimbolos(TablaDeSimbolos tablaDeSimbolos) {
+        this.tablaDeSimbolos = tablaDeSimbolos;
+    }
+    public  void setTabla(TablaDeSimbolos tabla){
+        this.tablaDeSimbolos =tabla;
+    }
+
+     public void syntax_error(Symbol s){
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        ide.escribirEnOutput("Error Sintactico Recuperado\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception{
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        ide.escribirEnOutput("Error Sintactico Panic Mode\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+    
+    public void ayudarConErrores(int tipo) {
+
+        String texto = "Sugerencias Para Error:\n";
+        switch (tipo) {
+            case 1:
+                texto += "Para Tamaño los unicos atributos permitidos son: \n cuadro, dimension_x y dimension_y\n";
+                break;
+            case 2:
+                texto += "Para el Fondo las opciones son un codigo HEX que representa el numero o una descripcion RGB por ejemplo:"
+                        + "\nRed:2,Green:3, Blue:20\n HEX: "
+                        + "#FFF123\n";
+                break;
+            case 3:
+                texto += "Las Opciones Para Tipo Son :\n\t-\"git\"\n\t-\"png\"\n";
+                break;
+            case 4:
+                texto += "Los Componentes para construir un Lienzo son:\n\t-nombre\n\t-Fondo\n\t-tipo\n\t-tamaño\n";
+                break;
+            case 5:
+                texto += "Para construir un lienzo debes de ingresar un id\nSolo puede contener caracteres alfanuméricos\n no puede tener espacios en blanco o caracteres especiales.\n ejemplo: lienzo1:{...}\n";
+                break;
+            case 6:
+                texto += "La estructura de este arhivo debe ser:\n {\n\tLIENZOS:{...}\n}\n";
+                break;
+                
+            default:
+                throw new AssertionError();
+        }
+       ide.escribirEnOutput(texto);
+    }
+
+:}
+
+action code {:
+    private boolean error =false;
+    private boolean errorRecuperable=false;
+    private Object[] atributosTam = new Object[3];
+    private Object[] atributosLienzo = new Object[5];
+        private Object[] atributosColor = new Object[3];
+    private void resetearAtributos(Object[] atributos){
+        for(int i=0;i<atributos.length;i++){
+            atributos[i]=null;
+        }
+    }
+
+
+    public boolean getError(){
+        return error;
+    }
+        protected void mostrarAtributoRepetido(String atributo, Symbol s,AnalizadorSintacticoLienzo asl) {
+
+        asl.ide.escribirEnOutput("El atributo " + atributo + " se encuentra repetido\n");
+
+        asl.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        asl.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+    protected void mostrarElementoFaltante(Object[] atributos,int tipo, Symbol s,AnalizadorSintacticoLienzo asl) {
+        asl.ide.escribirEnOutput("Atributo Faltante: \n");
+        String text="";
+        switch (tipo) {
+            case 1:
+                if(atributos[0]==null){
+                    text+="\t-cuadro\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-dimesion_x\n";
+                }
+                if(atributos[2]==null){
+                     text+="\t-dimesion_y\n";
+                }
+                break;
+            case 2:
+                if(atributos[0]==null){
+                    text+="\t-Red\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-Green\n";
+                }
+                if(atributos[2]==null){
+                     text+="\t-Blue\n";
+                }
+                break;
+            case 3:
+                if(atributos[0]==null){
+                    text+="\t-nombre\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-tipo\n";
+                }
+                if(atributos[2]==null){
+                     text+="\t-Fondo\n";
+                }
+                if(atributos[3]==null){
+                     text+="\t-tamaño\n";
+                }
+                break;
+        }
+        asl.ide.escribirEnOutput(text);
+        asl.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        asl.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal LIENZOS,NOMBRE,TAMAÑO,CUADRO,DIM_X,DIM_Y,TIPO,PNG,GIF,FONDO,HEX,RED,BLUE,
+GREEN,LLAVE_A,LLAVE_C,DOS_PUNTOS,COMA,COMILLAS;
+terminal String NumRGB,NumHEX,Id,Entero,Nombre,ERROR;
+
+/* Non-terminals */
+non terminal Inicio,Cabecera,Lienzos,Lienzo,Componentes,Componente,Tipo,Color,CompRGBs,Numero,
+RGB,CompsTamaño,CompTam;
+
+start with Inicio;
+
+Inicio 		::= LLAVE_A Cabecera LLAVE_C{:asl.error=this.error;asl.errorRecuperable=this.errorRecuperable;:}
+                    |error {:error=true;asl.ayudarConErrores(6);asl.error=this.error;asl.errorRecuperable=this.errorRecuperable;:} ;
+Cabecera     ::=  LIENZOS DOS_PUNTOS LLAVE_A  Lienzos LLAVE_C 
+                    |error {:error=true;asl.ayudarConErrores(6);:};
+Lienzos     ::=  Lienzo COMA Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id:id DOS_PUNTOS LLAVE_A Componentes LLAVE_C{:if(asl.tablaDeSimbolos.obtenerExistencia((String)id,TablaDeSimbolos.TIPO_LIENZO)==null){
+                                                                if(Lienzo.verificarObligatoriosTam(atributosLienzo)){
+                                                                Lienzo lienzo = new Lienzo(atributosLienzo);
+                                                                lienzo.setId((String)id);
+                                                                asl.tablaDeSimbolos.insertObject((String)id,TablaDeSimbolos.TIPO_LIENZO
+                                                                ,lienzo);
+                                                                }else{
+                                                                    errorRecuperable=true;
+                                                                    mostrarElementoFaltante(atributosLienzo,3,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                                }
+                                                            }else{
+                                                                    errorRecuperable=true;
+                                                                  mostrarAtributoRepetido("Linzo de id "+(String)id,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);  
+                                                                               
+                                                            }resetearAtributos(atributosLienzo);
+                                                             :}
+                |error {:asl.ayudarConErrores(5);:};
+Componentes 	::=  Componente COMA Componentes
+				| Componente;
+Componente	::= NOMBRE DOS_PUNTOS COMILLAS Nombre:nom COMILLAS  {:if(atributosLienzo[0]==null){
+                                                                                if(nom!=null){
+                                                                                    atributosLienzo[0]=nom;
+                                                                                 }
+                                                                              }else{
+                                                                                mostrarAtributoRepetido("Nombre",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);  
+                                                                                }:}
+				|TIPO DOS_PUNTOS COMILLAS Tipo:ti COMILLAS{:if(atributosLienzo[1]==null){
+                                                                                if(ti!=null){
+                                                                                    atributosLienzo[1]=ti;
+                                                                                 }
+                                                                              }else{
+                                                                                mostrarAtributoRepetido("Tipo",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);  
+                                                                                }:}
+				|FONDO DOS_PUNTOS  LLAVE_A Color:color LLAVE_C{:if(atributosLienzo[2]==null){
+                                                                            if(color!=null){
+                                                                                atributosLienzo[2]=color;
+                                                                            }
+                                                                        }else{
+                                                                            mostrarAtributoRepetido("Fondo",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);  
+                                                                        }:}
+				|TAMAÑO  DOS_PUNTOS LLAVE_A  CompsTamaño LLAVE_C {: if(atributosLienzo[3]==null){
+                                                                        if(Lienzo.verificarObligatoriosTam(atributosTam)){
+                                                                        atributosLienzo[3]=(Integer)atributosTam[0];
+                                                                        atributosLienzo[4]=new Dimension((Integer)atributosTam[1], (Integer)atributosTam[2]);
+                                                                    }else{
+                                                                    errorRecuperable=true;
+                                                                        mostrarElementoFaltante(atributosTam,1,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                                    }
+                                                                        }else{
+                                                                           mostrarAtributoRepetido("TAMAÑO",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);  
+                                                                        }
+                                                                    resetearAtributos(atributosTam);:}
+                                |error  {:asl.ayudarConErrores(4);:};
+Tipo ::= PNG{:RESULT = Lienzo.TIPO_PNG;:}
+	|GIF    {:RESULT = Lienzo.TIPO_GIF;:}
+        |error{:asl.ayudarConErrores(3);RESULT =null;:};
+Color ::= CompRGBs:color {:RESULT =color;:}
+		| HEX NumHEX:numColor {:Color color =Lienzo.construirColor((String)numColor);
+                                        RESULT =color;:}
+                 ;
+
+
+CompRGBs ::=RGB COMA CompRGBs:com {:RESULT =com;:}
+			|RGB        {:if(Lienzo.verificarObligatoriosTam(atributosColor)){
+                                    Color color =Lienzo.construirColor(atributosColor);
+                                    RESULT=color;
+                                    }else{
+                                      errorRecuperable=true;
+                                       mostrarElementoFaltante(atributosColor,2,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                                    } 
+                                                                    resetearAtributos(atributosColor);:};
+RGB	::= RED DOS_PUNTOS NumRGB:num  {:if(atributosColor[0]==null){
+                                                   atributosColor[0]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Red ",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+		| BLUE DOS_PUNTOS NumRGB:num    {:if(atributosColor[2]==null){
+                                                   atributosColor[2]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Blue",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+		| GREEN DOS_PUNTOS NumRGB:num   {:if(atributosColor[1]==null){
+                                                   atributosColor[1]=Integer.parseInt(num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Green",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+                |error {:asl.ayudarConErrores(2);:};
+CompsTamaño::= CompTam COMA CompsTamaño
+				|CompTam     ;
+CompTam::=	CUADRO DOS_PUNTOS Numero:num{:if(atributosTam[0]==null){
+                                                   atributosTam[0]=Integer.parseInt((String)num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Numero De Cuadro",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+               			| DIM_X DOS_PUNTOS Numero:num{:if(atributosTam[1]==null){
+                                                   atributosTam[1]=Integer.parseInt((String)num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Numero De Dimension X",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+                                 |   DIM_Y DOS_PUNTOS Numero:num{:if(atributosTam[2]==null){
+                                                   atributosTam[2]=Integer.parseInt((String)num);
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Numero De Dimension Y",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoLienzo$stack.peek()),asl);
+                                                }:}
+                                |error          {:asl.ayudarConErrores(1);:};
+Numero::=  Entero:num   {:RESULT=num;:}
+            |NumRGB:num {:RESULT=num;:};
+
+

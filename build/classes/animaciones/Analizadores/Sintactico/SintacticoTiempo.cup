@@ -1,0 +1,250 @@
+package animaciones.Analizadores.Sintactico;
+import animaciones.Analizadores.Semantico.TablaDeSimbolos;
+import animaciones.Objetos.Lienzo;
+import animaciones.Analizadores.Semantico.Objeto;
+import java.util.ArrayList;
+import animaciones.Objetos.Imagen;
+import animaciones.Objetos.Tiempo;
+import animaciones.ui.IDE;
+import java_cup.runtime.Symbol;
+
+ parser code {:
+    public boolean error;
+    public boolean errorRecuperable;
+    public TablaDeSimbolos tablaDeSimbolos;
+        protected IDE ide;
+    public  void setFrame(IDE frame){
+        ide =frame;
+    }
+public void setTablaDeSimbolos(TablaDeSimbolos tablaDeSimbolos) {
+        this.tablaDeSimbolos = tablaDeSimbolos;
+    }
+    public  void setTabla(TablaDeSimbolos tabla){
+        this.tablaDeSimbolos =tabla;
+    }
+
+     public void syntax_error(Symbol s){
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        
+        ide.escribirEnOutput("Error Sintactico Recuperado\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+
+    public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception{
+        String lexema = s.value.toString();
+        int fila = s.right;
+        int columna = s.left;
+        ide.escribirEnOutput("Error Sintactico Panic Mode\n");
+        ide.escribirEnOutput("\t \tLexema: "+ lexema+"\n");
+        ide.escribirEnOutput("\t \tFila: "+ fila+"\n");
+        ide.escribirEnOutput("\t \tColumna: "+ columna+"\n");
+    }
+    
+    public void mostrarElementoNoExistente(String nombreLienzo, Symbol s){
+    ide.escribirEnOutput("Error Semantico \n");
+    ide.escribirEnOutput("Lienzo \""+nombreLienzo+"\" no existe en El Archivo .lnz \n");
+
+}
+
+    public void ayudarConErrores(int tipo) {
+
+        String texto = "Sugerencias Para Error:\n";
+        switch (tipo) {
+            case 1:
+                texto += "Para los Imagenes los atributos permitidos son\n\t-id\n\t-duracion";
+                break;
+            case 5:
+                texto += "Necesitas un id para cada lienzo de estructura alfanumerico como por ejemplo\n\tid_lienzo{...}\n";
+                break;
+            case 6:
+                texto += "La estructura de este arhivo debe ser:\n {\nTIEMPOS:{...}\n}\n";
+                break;
+                
+            default:
+                throw new AssertionError();
+        }
+       ide.escribirEnOutput(texto);
+    }
+
+:}
+
+action code {:
+    private boolean error =false;
+    private boolean errorRecuperable=false;
+        private Object[] atributosTiempo = new Object[3];
+        private Object[] atributosImagen = new Object[2];
+        private int indice =0;
+    private void resetearAtributos(Object[] atributos){
+        for(int i=0;i<atributos.length;i++){
+            atributos[i]=null;
+        }
+    }
+
+
+    public boolean getError(){
+        return error;
+    }
+        protected void mostrarAtributoRepetido(String atributo, Symbol s,AnalizadorSintacticoTiempo ast) {
+        ast.ide.escribirEnOutput("Error Semantico \n");
+        ast.ide.escribirEnOutput("El atributo " + atributo + " se encuentra repetido\n");
+
+        ast.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        ast.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+    protected void mostrarElementoFaltante(Object[] atributos,int tipo, Symbol s,AnalizadorSintacticoTiempo ast) {
+        ast.ide.escribirEnOutput("Atributo Faltante: \n");
+        String text="";
+        switch (tipo) {
+            
+            case 1:
+                if(atributos[0]==null){
+                    text+="\t-id\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-duracion\n";
+                }
+
+                break;
+            case 2:
+                if(atributos[0]==null){
+                    text+="\t-inicio\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-fin\n";
+                }
+                if(atributos[1]==null){
+                    text+="\t-imagenes\n";
+                }
+                break;
+            
+        }
+        ast.ide.escribirEnOutput(text);
+        ast.ide.escribirEnOutput("\t \tFila: " + s.right + "\n");
+        ast.ide.escribirEnOutput("\t \tColumna: " + s.left + "\n");
+
+    }
+
+:}
+
+/* Terminals (tokens returned by the scanner). */
+terminal TIEMPOS,DURACION,IMAGENES,ID,INICIO,FIN,LLAVE_A,LLAVE_C,CORCHETE_A,CORCHETE_C,DOS_PUNTOS,COMA,COMILLAS;
+terminal String Entero,Id,ERROR;
+
+/* Non-terminals */
+non terminal Inicio,Cabecera,Lienzos,Lienzo,Comps_Tiempo, Comp_Tiempo,Imagenes, Comps_Imagen, Comp_Imagen;
+
+start with Inicio;
+
+Inicio 		::= LLAVE_A Cabecera LLAVE_C{:ast.error=this.error;ast.errorRecuperable=this.errorRecuperable;:}
+                    |error {:error=true;ast.ayudarConErrores(6);ast.error=this.error;ast.errorRecuperable=this.errorRecuperable;:} ;
+Cabecera     ::=  TIEMPOS DOS_PUNTOS LLAVE_A  Lienzos LLAVE_C 
+                    |error {:error=true;ast.ayudarConErrores(6);:};
+Lienzos     ::=  Lienzo COMA Lienzos 
+			| Lienzo	;
+Lienzo 	::=  Id:id DOS_PUNTOS LLAVE_A Comps_Tiempo:tiempo LLAVE_C{:Tiempo tiempo1= (Tiempo)tiempo;
+                                                                if(ast.tablaDeSimbolos.obtenerExistencia((String)id,TablaDeSimbolos.TIPO_LIENZO)!=null){
+                                                                
+                                                             
+                                                              Lienzo li =(Lienzo)((Objeto)(ast.tablaDeSimbolos.obtenerExistencia((String)id,TablaDeSimbolos.TIPO_LIENZO))).getValor();
+                                                                        li.agregarInicioyFin(tiempo1.getIdInicio(),tiempo1.getIdFin());
+                                                             for(int i=0;i<tiempo1.getImagenes().size();i++){
+                                                                        
+                                                                        ast.tablaDeSimbolos.asignaridPert(tiempo1.getImagenes().get(i).getId(),TablaDeSimbolos.TIPO_IMAGEN,(String) id);
+                                                                       li.agregarImagen(tiempo1.getImagenes().get(i));                                                                                                                                                 
+                                                             }
+                                                            }else{
+                                                                    for(int i=0;i<tiempo1.getImagenes().size();i++){
+                                                                        
+                                                                        ast.tablaDeSimbolos.eliminar(tiempo1.getImagenes().get(i).getId(),TablaDeSimbolos.TIPO_IMAGEN);
+                                                                                                                                                                                                                       
+                                                             }
+                                                                  ast.mostrarElementoNoExistente((String)id,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()));             
+                                                            }
+                                                             :}
+                |error {:ast.ayudarConErrores(5);errorRecuperable=true;:};
+Comps_Tiempo 	::=  Comp_Tiempo COMA Comps_Tiempo:tiempo    {:RESULT=tiempo;:}
+				| Comp_Tiempo:tiempo    {:if(Lienzo.verificarObligatoriosTam(atributosTiempo)){
+                                                            Tiempo im = new Tiempo((String)atributosTiempo[0],(String)atributosTiempo[1],(ArrayList<Imagen>)atributosTiempo[2]);
+                                                             RESULT=im;
+                                                        }else{
+                                                             RESULT =null;
+                                                        errorRecuperable=true;
+                                                         mostrarElementoFaltante(atributosTiempo,2,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                        }resetearAtributos(atributosTiempo);:};
+Comp_Tiempo::= INICIO DOS_PUNTOS COMILLAS Id:id COMILLAS{:if(atributosTiempo[0]==null){
+                                                   atributosTiempo[0]=(String)id;
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Inicio",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                }:}
+                |FIN DOS_PUNTOS COMILLAS Id:id COMILLAS{:if(atributosTiempo[1]==null){
+                                                   atributosTiempo[1]=(String)id;
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Fin",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                }:}
+                |IMAGENES DOS_PUNTOS CORCHETE_A Imagenes:ima CORCHETE_C {:if(atributosTiempo[2]==null){
+                                                   atributosTiempo[2]=(ArrayList<Imagen>)ima;
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Imagenes",((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                }
+                                                indice=0;
+                                                                    :};
+
+Imagenes ::= LLAVE_A Comps_Imagen:im LLAVE_C COMA Imagenes:ims     {:
+                                                                                ArrayList<Imagen> nuevas_imagenes= new ArrayList<>();
+                                                                                if(im!=null){
+                                                                        nuevas_imagenes.add((Imagen) im);
+                                                                        }
+                                                                        for(int i=0;i<((ArrayList<Imagen>)ims).size();i++){
+                                                                        nuevas_imagenes.add(((ArrayList<Imagen>)ims).get(i));
+                                                                         }
+                                                                         RESULT= nuevas_imagenes;:}
+			|LLAVE_A Comps_Imagen:im LLAVE_C       {:
+                                                                        ArrayList<Imagen> imagenes= new ArrayList<>();
+                                                                        if(im!=null){
+                                                                        imagenes.add((Imagen) im);
+                                                                        
+                                                                        } RESULT= imagenes;:};
+
+
+
+Comps_Imagen ::= Comp_Imagen COMA Comps_Imagen:im{:RESULT=im;:}
+			|Comp_Imagen{:if(Lienzo.verificarObligatoriosTam(atributosImagen)){
+                                        if(ast.tablaDeSimbolos.obtenerExistencia2((String)atributosImagen[0],TablaDeSimbolos.TIPO_IMAGEN)==null){
+                                        
+                                        Imagen im = new Imagen((String)atributosImagen[0],(Integer)atributosImagen[1],indice);
+                                        indice ++;
+                                        ast.tablaDeSimbolos.insertObject((String)atributosImagen[0],TablaDeSimbolos.TIPO_IMAGEN,im);
+                                        RESULT=im;
+                                        }else{
+                                        mostrarAtributoRepetido("Imagen de Id "+(String)atributosImagen[0],((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast); 
+                                        RESULT =null;
+                                        }
+                                      }else{
+                                        RESULT =null;
+                                        errorRecuperable=true;
+                                        mostrarElementoFaltante(atributosImagen,1,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                      }resetearAtributos(atributosImagen);:};
+Comp_Imagen ::= ID DOS_PUNTOS COMILLAS Id:id COMILLAS{:if(atributosImagen[0]==null){
+                                                   atributosImagen[0]=(String)id;
+                                              }else{
+                                                    errorRecuperable=true;
+                                                    mostrarAtributoRepetido("Id :"+(String)id,((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                }:}
+				|DURACION DOS_PUNTOS Entero:dur {:if(atributosImagen[1]==null){
+                                                                    atributosImagen[1]=Integer.parseInt((String)dur);
+                                                                }else{
+                                                                    errorRecuperable=true;
+                                                                    mostrarAtributoRepetido("Duracion"+Integer.parseInt((String)dur),((java_cup.runtime.Symbol) CUP$AnalizadorSintacticoTiempo$stack.peek()),ast);
+                                                                 }:}
+                 |error          {:ast.ayudarConErrores(1);:};
+
+
